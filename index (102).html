@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pencarian KBLI &amp; KBJI</title>
+<style>
+:root{--bg:#f7f7f5;--card:#fff;--tx:#1d1d1b;--mut:#6b6b66;--bd:#e0e0da;--ac:#0f6e56;--acbg:#e1f5ee}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#16181a;--card:#1f2224;--tx:#ececea;--mut:#9a9a94;--bd:#33373a;--ac:#5dcaa5;--acbg:#12372d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:900px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:16px}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tab{flex:1;padding:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:10px;font:inherit;cursor:pointer}
+.tab.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+input,select{flex:1;min-width:140px;padding:11px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);font:inherit}
+select{flex:0 0 auto}
+.meta{font-size:13px;color:var(--mut);margin:8px 0}
+.item{position:relative;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px 44px 12px 14px;margin-bottom:8px}
+.code{display:inline-block;background:var(--acbg);color:var(--ac);font-weight:600;padding:1px 9px;border-radius:6px;margin-right:8px}
+.ttl{font-weight:600}.loc{color:var(--mut);font-size:13px;margin-top:2px}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;margin:8px 0 0;font-size:13px}
+dt{color:var(--mut)}dd{margin:0}
+.star{position:absolute;right:8px;top:6px;background:none;border:0;font-size:22px;color:var(--ac);cursor:pointer}
+.chips{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{background:var(--acbg);color:var(--ac);border-radius:999px;padding:2px 6px 2px 10px;font-size:12px}
+.chip button{background:none;border:0;color:inherit;cursor:pointer;font-size:14px;padding:0 4px}
+.add{background:none;border:1px dashed var(--bd);color:var(--mut);border-radius:999px;padding:2px 10px;font:inherit;font-size:12px;cursor:pointer}
+details{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px 14px;margin-bottom:10px}
+summary{cursor:pointer;font-weight:600}details .row{margin:10px 0 0}
+.note{color:var(--mut);font-size:12px;margin-top:8px}
+footer{margin-top:24px;padding:14px;border:1px dashed var(--bd);border-radius:12px;font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<h1>Pencarian KBLI &amp; KBJI</h1>
+<div class="sub">Cari berdasarkan kode, uraian, nama lokal, atau catatan. Beberapa kata = semua harus cocok.</div>
+
+<div class="tabs">
+  <button class="tab on" id="t-kbli">KBLI (Lapangan Usaha)</button>
+  <button class="tab" id="t-kbji">KBJI (Jabatan)</button>
+</div>
+
+<div class="row">
+  <input type="search" id="q" placeholder="Contoh: restoran, 56101, coto, akuntan…" autocomplete="off">
+  <select id="kat"></select>
+</div>
+
+<details id="lf"><summary>+ Tambah nama lokal sendiri (KBLI)</summary>
+  <div class="row"><input id="l-kode" placeholder="Kode KBLI, mis. 56101"><input id="l-nama" placeholder="Nama lokal, mis. warung coto"></div>
+  <div class="row"><input id="l-wil" placeholder="Wilayah (opsional)"><input id="l-cat" placeholder="Catatan (opsional)"><button id="l-add" class="tab" style="flex:0 0 auto">Simpan</button></div>
+  <div class="note" id="l-msg"></div>
+</details>
+
+<div class="meta" id="meta"></div>
+<div id="out"></div>
+
+<footer>
+  <b>Kode edit</b> (diperlukan untuk menambah/menghapus nama lokal dan favorit)
+  <div class="row" style="margin-top:8px"><input type="password" id="tok" placeholder="Tempel kode edit dari Apps Script"><button class="tab" id="tok-save" style="flex:0 0 auto">Simpan di browser ini</button></div>
+  <div class="note" id="tok-msg"></div>
+</footer>
+</main>
+
+<script>
+// ====== GANTI dengan URL Web App hasil deploy Apps Script (berakhiran /exec) ======
+const API_URL = "GANTI_DENGAN_URL_WEB_APP_ANDA";
+// ==================================================================================
+
+const LBL = {kategori:"Kategori",golongan_pokok:"Gol. Pokok",golongan:"Golongan",subgolongan:"Subgolongan",kelompok:"Kelompok",nama_lokal:"Nama lokal",catatan:"Catatan",uraian:"Uraian"};
+const SHOW = {kbli:["kategori","golongan_pokok","golongan","subgolongan","kelompok","catatan"], kbji:["golongan_pokok","golongan","subgolongan"]};
+let tab = "kbli", META = {}, timer, seq = 0;
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const getTok = () => { try { return localStorage.getItem("edit_token") || ""; } catch (e) { return ""; } };
+
+async function api(params) {
+  const r = await fetch(API_URL + "?" + new URLSearchParams(params));
+  return r.json();
+}
+async function write(body) {
+  if (!getTok()) { alert("Isi kode edit dulu di bagian bawah halaman."); return {error: "no token"}; }
+  const r = await fetch(API_URL, {method: "POST", headers: {"Content-Type": "text/plain;charset=utf-8"}, body: JSON.stringify(Object.assign({token: getTok()}, body))});
+  const d = await r.json();
+  if (d.error) alert(d.error);
+  return d;
+}
+
+function fillKat() {
+  const list = META[tab] || [];
+  $("kat").innerHTML = '<option value="">' + (tab === "kbli" ? "Semua kategori" : "Semua gol. pokok") + "</option>" +
+    list.map(k => "<option>" + esc(k) + "</option>").join("");
+}
+
+async function search() {
+  const my = ++seq;
+  $("meta").textContent = "Mencari…";
+  try {
+    const d = await api({tipe: tab, q: $("q").value, kategori: $("kat").value});
+    if (my !== seq) return;
+    if (d.error) { $("meta").textContent = d.error; return; }
+    render(d);
+  } catch (e) {
+    $("meta").textContent = "Gagal terhubung ke database. Periksa API_URL dan izin deploy (Anyone).";
+  }
+}
+
+function render(d) {
+  $("meta").textContent = d.total + " hasil" + (d.total > d.hasil.length ? " (menampilkan " + d.hasil.length + " teratas, persempit pencarian)" : "");
+  const kb = tab === "kbli";
+  $("out").innerHTML = d.hasil.map(r => {
+    const title = kb ? (r.kelompok || r.subgolongan) : r.uraian;
+    const rows = SHOW[tab].filter(c => r[c]).map(c => "<dt>" + LBL[c] + "</dt><dd>" + esc(r[c]) + "</dd>").join("");
+    const star = kb ? '<button class="star" data-fav="' + esc(r.kode) + '" title="Favorit">' + (r.favorit ? "★" : "☆") + "</button>" : "";
+    const chips = kb ? '<div class="chips">' + (r.lokal || []).map(l =>
+      '<span class="chip">' + esc(l.nama_lokal) + (l.wilayah ? " · " + esc(l.wilayah) : "") + (l.catatan_lokal ? " — " + esc(l.catatan_lokal) : "") +
+      '<button data-del="' + esc(l.id) + '" title="Hapus">×</button></span>').join("") +
+      '<button class="add" data-add="' + esc(r.kode) + '">+ nama lokal</button></div>' : "";
+    return '<div class="item">' + star + '<span class="code">' + esc(r.kode) + '</span><span class="ttl">' + esc(title) + "</span>" +
+      (r.nama_lokal ? '<div class="loc">' + esc(r.nama_lokal) + "</div>" : "") + "<dl>" + rows + "</dl>" + chips + "</div>";
+  }).join("") || '<div class="meta">Tidak ada hasil.</div>';
+}
+
+function setTab(t) {
+  tab = t;
+  $("t-kbli").classList.toggle("on", t === "kbli");
+  $("t-kbji").classList.toggle("on", t === "kbji");
+  $("lf").style.display = t === "kbli" ? "" : "none";
+  $("q").value = ""; fillKat(); search();
+}
+
+$("t-kbli").onclick = () => setTab("kbli");
+$("t-kbji").onclick = () => setTab("kbji");
+$("q").oninput = () => { clearTimeout(timer); timer = setTimeout(search, 300); };
+$("kat").onchange = search;
+
+$("out").onclick = async e => {
+  const t = e.target; let v;
+  if ((v = t.getAttribute("data-fav"))) { const d = await write({action: "fav", kode: v}); if (d.ok) search(); }
+  else if ((v = t.getAttribute("data-del"))) { if (confirm("Hapus nama lokal ini?")) { const d = await write({action: "delete", id: v}); if (d.ok) search(); } }
+  else if ((v = t.getAttribute("data-add"))) { $("lf").open = true; $("l-kode").value = v; $("l-nama").focus(); $("lf").scrollIntoView(); }
+};
+
+$("l-add").onclick = async () => {
+  const kode = $("l-kode").value.trim(), nama = $("l-nama").value.trim();
+  if (!kode || !nama) { $("l-msg").textContent = "Kode dan nama lokal wajib diisi."; return; }
+  const d = await write({action: "add", kode, nama_lokal: nama, wilayah: $("l-wil").value.trim(), catatan_lokal: $("l-cat").value.trim()});
+  if (d.ok) { $("l-msg").textContent = "Tersimpan."; $("l-nama").value = ""; $("l-cat").value = ""; search(); }
+};
+
+$("tok-save").onclick = () => {
+  try { localStorage.setItem("edit_token", $("tok").value.trim()); $("tok-msg").textContent = "Tersimpan di browser ini."; }
+  catch (e) { $("tok-msg").textContent = "Browser menolak penyimpanan."; }
+};
+
+(async function init() {
+  $("tok").value = getTok();
+  try { META = await api({action: "meta"}); } catch (e) {}
+  fillKat(); search();
+})();
+</script>
+</body>
+</html>

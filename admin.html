@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a5ca8">
+<meta name="robots" content="noindex, nofollow">
+<title>Pencarian KBLI &amp; KBJI</title>
+<style>
+:root{
+  --bl:#0a5ca8;--bl-d:#073f75;--or:#f7941d;--gr:#3aa935;
+  --bg:#f2f6fb;--card:#fff;--tx:#14243a;--mut:#5b6b80;--bd:#d9e3ef;
+  --pri:#0a5ca8;--pri-tx:#0a5ca8;--pri-bg:#e5f0fb;
+  --gr-bg:#e3f4e1;--gr-tx:#1f7a1b;--or-bg:#fff0dc;--or-tx:#a85d00;--mk:#ffe9a8;
+  --sh:0 1px 2px rgba(10,60,110,.06),0 4px 14px rgba(10,60,110,.06)
+}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;
+  --bg:#0e1722;--card:#162231;--tx:#e8eef6;--mut:#93a4b8;--bd:#26374b;
+  --pri:#1a74c9;--pri-tx:#7bbcf5;--pri-bg:#12304d;
+  --gr-bg:#16341a;--gr-tx:#7fd57a;--or-bg:#3b2a10;--or-tx:#ffb85c;--mk:#6b5a14;--sh:none}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.hd{background:linear-gradient(135deg,var(--bl-d),var(--bl));color:#fff}
+.hd-in{max-width:960px;margin:0 auto;padding:22px 16px 20px;display:flex;align-items:center;gap:14px}
+.hd img{height:48px;width:auto;background:#fff;border-radius:10px;padding:4px}
+.hd h1{font-size:22px;margin:0;line-height:1.2}
+.hd p{margin:2px 0 0;font-size:13px;opacity:.85}
+.stripe{height:5px;background:linear-gradient(90deg,var(--bl) 0 34%,var(--or) 34% 67%,var(--gr) 67%)}
+main{max-width:960px;margin:0 auto;padding:0 16px 40px}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 0 8px}
+.tabs{display:flex;gap:8px;margin-bottom:10px}
+.tab{flex:1;min-height:44px;padding:8px 10px;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:12px;font:inherit;font-weight:600;cursor:pointer;transition:.15s}
+.tab:hover{border-color:var(--pri)}
+.tab.on{background:var(--pri);color:#fff;border-color:var(--pri);box-shadow:0 3px 10px rgba(10,92,168,.3)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+input,select,button{font-family:inherit}
+input,select{flex:1;min-width:0;min-height:46px;padding:10px 14px;border:1px solid var(--bd);border-radius:12px;background:var(--card);color:var(--tx);font-size:16px}
+input:focus,select:focus{outline:2px solid var(--or);outline-offset:0;border-color:var(--or)}
+select{flex:0 0 auto;max-width:100%}
+.sug{margin-top:8px;font-size:13px;color:var(--mut);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sug button{border:1px solid var(--bd);background:var(--card);color:var(--pri-tx);border-radius:999px;padding:3px 12px;font-size:13px;cursor:pointer}
+.sug button:hover{background:var(--pri-bg)}
+.meta{font-size:13px;color:var(--mut);margin:10px 2px}
+.item{background:var(--card);border:1px solid var(--bd);border-left:4px solid var(--bl);border-radius:14px;padding:12px 14px;margin-bottom:10px;box-shadow:var(--sh);animation:in .25s ease both}
+.item.fav{border-left-color:var(--or)}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.item{animation:none}html{scroll-behavior:auto}}
+.top{display:flex;gap:10px;align-items:flex-start}
+.code{flex:0 0 auto;background:var(--pri-bg);color:var(--pri-tx);border:0;font-weight:700;font-size:15px;padding:3px 10px;border-radius:8px;cursor:pointer;font-variant-numeric:tabular-nums}
+.code:hover{background:var(--pri);color:#fff}
+.ttl{flex:1;font-weight:600;min-width:0;overflow-wrap:anywhere}
+.kat{display:inline-block;background:var(--or-bg);color:var(--or-tx);font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;margin-bottom:3px}
+.star{flex:0 0 auto;background:none;border:0;font-size:24px;line-height:1;color:var(--or);cursor:pointer;padding:0 2px}
+.loc{color:var(--mut);font-size:13px;margin-top:4px}
+.chips{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{background:var(--gr-bg);color:var(--gr-tx);border-radius:999px;padding:3px 6px 3px 11px;font-size:13px}
+.chip button{background:none;border:0;color:inherit;cursor:pointer;font-size:15px;padding:0 5px}
+.add{background:none;border:1px dashed var(--gr);color:var(--gr-tx);border-radius:999px;padding:3px 12px;font-size:13px;cursor:pointer}
+.add:hover{background:var(--gr-bg)}
+details.rc{margin-top:8px}
+details.rc summary{cursor:pointer;font-size:13px;color:var(--pri-tx);font-weight:600}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 14px;margin:8px 0 0;font-size:13px}
+dt{color:var(--mut)}dd{margin:0;overflow-wrap:anywhere}
+mark{background:var(--mk);color:inherit;border-radius:3px;padding:0 1px}
+.panel{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px 14px;margin-top:10px;box-shadow:var(--sh)}
+.panel summary{cursor:pointer;font-weight:700;color:var(--gr-tx)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:8px}
+.btn{min-height:46px;padding:8px 20px;border:0;border-radius:12px;background:var(--gr);color:#fff;font-weight:700;font-size:15px;cursor:pointer}
+.btn.pri{background:var(--pri)}
+.btn:hover{filter:brightness(1.08)}
+.note{color:var(--mut);font-size:12px;margin-top:8px}
+.empty{text-align:center;color:var(--mut);padding:40px 10px}
+.empty b{display:block;font-size:34px}
+#out.load{opacity:.5;transition:opacity .15s}
+footer{margin-top:20px;font-size:12px;color:var(--mut);text-align:center}
+#toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,30px);background:var(--bl-d);color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:20;max-width:90vw}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.sv{display:inline-block;background:var(--or-bg);color:var(--or-tx);border-radius:6px;padding:0 6px;font-size:11px;font-weight:700;margin-left:5px}
+.chip .ed{font-size:12px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:46px;padding:6px 10px;border:1px solid var(--bd);border-radius:12px;background:var(--card);margin-top:8px}
+.tags input{border:0;min-height:30px;padding:2px 4px;flex:1 1 150px;outline:0;background:transparent}
+.tags:focus-within{outline:2px solid var(--or)}
+.tg{background:var(--or-bg);color:var(--or-tx);border-radius:999px;padding:2px 4px 2px 10px;font-size:13px;font-weight:600}
+.tg button{background:none;border:0;color:inherit;cursor:pointer;padding:0 4px}
+.pick{margin-top:6px;font-size:12px;color:var(--mut);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pick button{border:1px solid var(--bd);background:var(--card);color:var(--or-tx);border-radius:999px;padding:1px 10px;font-size:12px;cursor:pointer}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:12px}
+.filters select{min-width:0;width:100%;min-height:42px;font-size:14px;text-overflow:ellipsis}
+.filters .reset{border:1px dashed var(--bd);background:none;color:var(--mut);border-radius:12px;min-height:42px;cursor:pointer;font-size:14px}
+.filters .reset:hover{color:var(--or-tx);border-color:var(--or)}
+.pub .adm{display:none!important}
+.admin .pubonly{display:none}
+.mode{font-size:11px;font-weight:700;background:var(--or);color:#3a2300;border-radius:999px;padding:1px 8px;vertical-align:middle;margin-left:6px}
+.mode:empty{display:none}
+.usul{margin-top:6px;font-size:13px}
+.usul a,.empty a{color:var(--or-tx);font-weight:600}
+.chips:empty{display:none}
+dialog{border:1px solid var(--bd);border-radius:16px;background:var(--card);color:var(--tx);padding:18px;width:min(92vw,560px);box-shadow:0 10px 40px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(5,20,40,.55)}
+dialog h3{margin:0 0 4px;font-size:17px}
+#dlg-f label{display:block;font-size:12px;color:var(--mut);margin-top:10px}
+#dlg-f input{width:100%;margin-top:3px}
+.dlg-b{display:flex;gap:8px;margin-top:16px}.dlg-b .btn{flex:1}
+.edrow{flex:0 0 auto;background:none;border:1px solid var(--bd);color:var(--mut);border-radius:8px;font-size:13px;padding:1px 8px;cursor:pointer}
+.edrow:hover{color:var(--pri-tx);border-color:var(--pri)}
+@media (max-width:600px){.filters{grid-template-columns:1fr 1fr}.tabs .tab{font-size:13px;padding:6px 4px}}
+@media (max-width:600px){
+  .hd-in{padding:16px 12px 14px}.hd h1{font-size:18px}.hd img{height:40px}
+  main{padding:0 12px 40px}
+  select{flex:1 1 100%}
+  .g2,.g3{grid-template-columns:1fr}
+  .btn{width:100%}
+  .top{flex-wrap:wrap}.ttl{flex:1 1 60%}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hd"><div class="hd-in">
+    <img id="logo" src="logo.png" alt="BPS" onerror="this.style.display='none'">
+    <div><h1>Pencarian KBLI &amp; KBJI <span id="mode" class="mode"></span></h1><p>Klasifikasi Baku Lapangan Usaha &amp; Jabatan Indonesia, dengan nama lokal</p></div>
+  </div></div>
+  <div class="stripe"></div>
+</header>
+
+<main>
+<div class="bar">
+  <div class="tabs" id="tabs">
+  </div>
+  <div class="row">
+    <input type="search" id="q" placeholder="Cari kode, uraian, atau nama lokal…" autocomplete="off">
+  </div>
+  <div class="sug" id="sug"></div>
+  <div class="usul pubonly"><a id="usul" target="_blank" rel="noopener">Tidak menemukan usaha Anda? Usulkan contoh</a></div>
+</div>
+<div class="filters" id="flt"><select id="sv" class="adm" aria-label="Survei"></select><button class="reset" id="rst" type="button">Reset filter</button></div>
+
+<div class="meta" id="meta"></div>
+<div class="adm" style="margin:-4px 0 10px"><button class="add" id="new-row" type="button">+ Tambah kode baru (<span id="nr-ver"></span>)</button></div>
+<div id="out"></div>
+
+<details id="lf" class="panel adm"><summary>+ Tambah nama lokal sendiri (<span id="lf-ver">KBLI</span>)</summary>
+  <div class="g2"><input id="l-kode" placeholder="Kode KBLI, mis. 56101" inputmode="numeric"><input id="l-nama" placeholder="Nama lokal, mis. warung coto"></div>
+  <div class="tags" id="tg"><input id="tg-in" placeholder="Survei yang memakai (Enter untuk menambah), mis. Sakernas"></div>
+  <div class="pick" id="pick"></div>
+  <div class="g3"><input id="l-wil" placeholder="Wilayah (opsional)"><input id="l-cat" placeholder="Catatan (opsional)"><button id="l-add" class="btn">Simpan</button></div>
+  <div class="note" id="l-msg"></div>
+</details>
+
+<details id="tokp" class="panel adm"><summary style="color:var(--pri-tx)">Pengaturan kode edit</summary>
+  <div class="g3" style="grid-template-columns:1fr auto"><input type="password" id="tok" placeholder="Tempel kode edit dari Apps Script"><button class="btn pri" id="tok-save">Simpan</button></div>
+  <div class="note" id="tok-msg">Diperlukan untuk menambah/menghapus nama lokal dan favorit. Disimpan di browser ini saja.</div>
+</details>
+
+<footer>Sumber: BPS (KBLI 2025, KBLI 2020, KBJI 2015). Nama lokal adalah tambahan pengguna.</footer>
+</main>
+<dialog id="dlg" class="adm"><h3 id="dlg-t"></h3><div class="note" id="dlg-n"></div><div id="dlg-f"></div>
+  <div class="dlg-b"><button class="btn" id="dlg-ok" type="button">Simpan</button><button class="tab" id="dlg-x" type="button" style="flex:0 0 auto">Batal</button></div>
+</dialog>
+<div id="toast"></div>
+
+<script>
+// ====== GANTI dengan URL Web App hasil deploy Apps Script (berakhiran /exec) ======
+const API_URL = "GANTI_DENGAN_URL_WEB_APP_ANDA";
+// ==================================================================================
+
+const ADMIN = true; // diganti true pada admin.html
+// ====== GANTI dengan link Google Form untuk usulan dari umum ======
+const FORM_URL = "GANTI_DENGAN_LINK_GOOGLE_FORM";
+// ==================================================================
+const LBL = {golongan_pokok:"Gol. Pokok",golongan:"Golongan",subgolongan:"Subgolongan",kelompok:"Kelompok",catatan:"Catatan"};
+const SHOW = {kbli:["golongan_pokok","golongan","subgolongan","kelompok","catatan"], kbji:["golongan_pokok","golongan","subgolongan"]};
+const SUG = {kbli:["restoran","warung","bengkel","toko","konstruksi","aplikasi"], kbji:["guru","akuntan","juru masak","perawat","programmer"]};
+// Daftar versi: samakan dengan VERSI di Code.gs
+const VERSI = {
+  kbli2025: {label: "KBLI 2025", jenis: "kbli"},
+  kbli2020: {label: "KBLI 2020", jenis: "kbli"},
+  kbji2015: {label: "KBJI 2015", jenis: "kbji"}
+};
+let ver = "kbli2025", tab = "kbli", META = {}, timer, seq = 0, terms = [], SV = [];
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const getTok = () => { try { return localStorage.getItem("edit_token") || ""; } catch (e) { return ""; } };
+
+function toast(t) { const e = $("toast"); e.textContent = t; e.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove("on"), 2200); }
+function hl(s) {
+  let h = esc(s);
+  terms.filter(t => t.length > 1).forEach(t => {
+    const e = esc(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    h = h.replace(new RegExp("(" + e + ")(?![^<]*>)", "gi"), "<mark>$1</mark>");
+  });
+  return h;
+}
+
+async function api(params) { const r = await fetch(API_URL + "?" + new URLSearchParams(params)); return r.json(); }
+async function call(action, params) {
+  if (!ADMIN) return api(action === "search" ? params : {action});
+  const r = await fetch(API_URL, {method: "POST", headers: {"Content-Type": "text/plain;charset=utf-8"}, body: JSON.stringify({token: getTok(), action, params})});
+  return r.json();
+}
+async function write(body) {
+  if (!getTok()) { toast("Isi kode edit dulu di bagian Pengaturan"); return {error: "no token"}; }
+  const r = await fetch(API_URL, {method: "POST", headers: {"Content-Type": "text/plain;charset=utf-8"}, body: JSON.stringify(Object.assign({token: getTok()}, body))});
+  const d = await r.json();
+  if (d.error) toast(d.error);
+  return d;
+}
+
+const LV = {kbli: ["kategori", "golongan_pokok", "golongan", "subgolongan", "kelompok"], kbji: ["golongan_pokok", "golongan", "subgolongan"]};
+const LVL = {kategori: "Kategori", golongan_pokok: "Gol. Pokok", golongan: "Golongan", subgolongan: "Subgolongan", kelompok: "Kelompok"};
+let F = {}, LAST = [];
+function buildFilters(op) {
+  document.querySelectorAll("#flt .lv").forEach(e => e.remove());
+  LV[tab].forEach((k, i) => {
+    const s = document.createElement("select");
+    s.className = "lv"; s.setAttribute("aria-label", LVL[k]);
+    s.innerHTML = '<option value="">' + LVL[k] + ": semua</option>" +
+      ((op && op[k]) || []).map(v => '<option value="' + esc(v) + '">' + esc(v) + "</option>").join("");
+    s.value = F[k] || "";
+    s.onchange = () => {
+      if (s.value) F[k] = s.value; else delete F[k];
+      LV[tab].slice(i + 1).forEach(x => delete F[x]);
+      search();
+    };
+    $("flt").insertBefore(s, $("sv"));
+  });
+}
+function fillSug() {
+  $("sug").innerHTML = "Coba: " + SUG[tab].map(s => '<button data-sug="' + esc(s) + '">' + esc(s) + "</button>").join("");
+}
+
+async function search() {
+  const my = ++seq;
+  terms = $("q").value.toLowerCase().split(/\s+/).filter(Boolean);
+  $("meta").textContent = "Mencari…"; $("out").classList.add("load");
+  try {
+    const d = await call("search", Object.assign({versi: ver, tipe: tab, q: $("q").value, survei: $("sv").value}, F));
+    if (my !== seq) return;
+    $("out").classList.remove("load");
+    if (d.error) { $("meta").textContent = ADMIN && !getTok() ? "Masukkan kode edit di bagian Pengaturan (bawah halaman)." : d.error; if (ADMIN) $("tokp").open = true; return; }
+    if (d.opsi) buildFilters(d.opsi);
+    render(d);
+  } catch (e) {
+    $("out").classList.remove("load");
+    $("meta").textContent = "Gagal terhubung ke database. Periksa API_URL dan izin deploy (Anyone).";
+  }
+}
+
+function render(d) {
+  LAST = d.hasil;
+  $("meta").textContent = d.total + " hasil" + (d.total > d.hasil.length ? " · menampilkan " + d.hasil.length + " teratas, persempit pencarian" : "");
+  const kb = tab === "kbli";
+  $("out").innerHTML = d.hasil.map(r => {
+    const title = kb ? (r.kelompok || r.subgolongan) : r.uraian;
+    const rows = SHOW[tab].filter(c => r[c]).map(c => "<dt>" + LBL[c] + "</dt><dd>" + esc(r[c]) + "</dd>").join("");
+    const edr = ADMIN ? '<button class="edrow" data-edrow="' + esc(r.kode) + '" title="Edit data resmi">✎ Edit</button>' : "";
+    const star = kb && ADMIN ? '<button class="star" data-fav="' + esc(r.kode) + '" title="Favorit" aria-label="Favorit">' + (r.favorit ? "★" : "☆") + "</button>" : "";
+    const chips = kb ? '<div class="chips">' + (r.lokal || []).map(l =>
+      '<span class="chip">' + hl(l.nama_lokal) + (l.wilayah ? " · " + esc(l.wilayah) : "") + (l.catatan_lokal ? " — " + esc(l.catatan_lokal) : "") +
+      (ADMIN ? svBadges(l) + '<button class="ed" data-ed="' + esc(l.id) + '" data-sv="' + esc(l.survei || "") + '" title="Ubah survei" aria-label="Ubah survei">✎</button><button data-del="' + esc(l.id) + '" title="Hapus" aria-label="Hapus">×</button>' : "") + "</span>").join("") +
+      (ADMIN ? '<button class="add" data-add="' + esc(r.kode) + '">+ nama lokal</button>' : "") + "</div>" : "";
+    return '<article class="item' + (r.favorit ? " fav" : "") + '"><div class="top">' +
+      '<button class="code" data-copy="' + esc(r.kode) + '" title="Klik untuk menyalin kode">' + esc(r.kode) + "</button>" +
+      '<div class="ttl">' + (kb && r.kategori ? '<span class="kat">Kategori ' + esc(r.kategori) + "</span><br>" : "") + hl(title) + "</div>" + edr + star + "</div>" +
+      (r.nama_lokal ? '<div class="loc">' + hl(r.nama_lokal) + "</div>" : "") + chips +
+      (rows ? '<details class="rc"><summary>Rincian hierarki</summary><dl>' + rows + "</dl></details>" : "") + "</article>";
+  }).join("") || emptyMsg();
+}
+
+function emptyMsg() {
+  const kosong = !$("q").value && !$("sv").value && !Object.keys(F).length;
+  return '<div class="empty"><b>🔎</b>' + (kosong
+    ? (ADMIN ? "Belum ada data untuk " + VERSI[ver].label + ". Isi sheet " + VERSI[ver].label.replace(" ", "_") + " di Google Sheet." : "Data " + VERSI[ver].label + " belum tersedia.")
+    : "Tidak ada hasil. Coba kata lain atau kurangi kata kunci.") + (ADMIN ? "" : '<br><a href="' + esc(FORM_URL) + '" target="_blank" rel="noopener">Tidak menemukan usaha Anda? Usulkan contoh</a>') + "</div>";
+}
+
+function setTab(v) {
+  ver = v; tab = VERSI[v].jenis;
+  try { localStorage.setItem("versi", v); } catch (e) {}
+  document.querySelectorAll("#tabs .tab").forEach(b => b.classList.toggle("on", b.getAttribute("data-v") === v));
+  $("lf").style.display = tab === "kbli" ? "" : "none";
+  $("lf-ver").textContent = VERSI[v].label; $("nr-ver").textContent = VERSI[v].label;
+  $("q").value = ""; $("sv").value = ""; F = {}; fillSv(); fillSug(); search();
+}
+
+const svBadges = l => l.survei ? l.survei.split(",").map(s => '<span class="sv">' + esc(s.trim()) + "</span>").join("") : "";
+function addTag(s) {
+  s.split(",").map(x => x.trim()).filter(Boolean).forEach(x => { if (!SV.some(y => y.toLowerCase() === x.toLowerCase())) SV.push(x); });
+  $("tg-in").value = ""; renderTags();
+}
+function renderTags() {
+  $("tg").querySelectorAll(".tg").forEach(e => e.remove());
+  SV.forEach((s, i) => { const e = document.createElement("span"); e.className = "tg"; e.innerHTML = esc(s) + '<button data-rm="' + i + '" aria-label="Hapus">×</button>'; $("tg").insertBefore(e, $("tg-in")); });
+  renderPick();
+}
+function renderPick() {
+  const list = (META.survei || []).filter(s => !SV.includes(s));
+  $("pick").innerHTML = list.length ? "Pernah dipakai: " + list.map(s => '<button data-pk="' + esc(s) + '">+ ' + esc(s) + "</button>").join("") : "";
+}
+function fillSv() {
+  const cur = $("sv").value;
+  $("sv").style.display = tab === "kbli" ? "" : "none";
+  $("sv").innerHTML = '<option value="">Semua survei</option>' + (META.survei || []).map(s => "<option>" + esc(s) + "</option>").join("");
+  $("sv").value = cur;
+}
+async function refreshMeta() { try { META = await call("meta"); if (META.error) META = {}; fillSv(); renderPick(); } catch (e) {} }
+$("tg").onclick = e => { const r = e.target.getAttribute("data-rm"); if (r !== null) { SV.splice(+r, 1); renderTags(); } else $("tg-in").focus(); };
+$("tg-in").onkeydown = e => {
+  if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag($("tg-in").value); }
+  else if (e.key === "Backspace" && !$("tg-in").value && SV.length) { SV.pop(); renderTags(); }
+};
+$("pick").onclick = e => { const s = e.target.getAttribute("data-pk"); if (s) addTag(s); };
+const COLS = {
+  kbli: [["kategori", "Kategori (huruf)"], ["kode", "Kode"], ["golongan_pokok", "Golongan pokok"], ["golongan", "Golongan"], ["subgolongan", "Subgolongan"], ["kelompok", "Kelompok"], ["nama_lokal", "Nama lokal bawaan"], ["catatan", "Catatan"]],
+  kbji: [["kode", "Kode"], ["uraian", "Uraian"], ["golongan_pokok", "Golongan pokok"], ["golongan", "Golongan"], ["subgolongan", "Subgolongan"], ["nama_lokal", "Nama lokal bawaan"]]
+};
+const LFIELDS = [{k: "kode", label: "Kode KBLI"}, {k: "nama_lokal", label: "Nama lokal"}, {k: "wilayah", label: "Wilayah"}, {k: "catatan_lokal", label: "Catatan lokal"}, {k: "survei", label: "Survei (pisahkan dengan koma)"}];
+
+function openDlg(title, fields, vals, onSave, note) {
+  $("dlg-t").textContent = title; $("dlg-n").textContent = note || "";
+  $("dlg-f").innerHTML = fields.map(f => "<label>" + esc(f.label) + '<input data-k="' + f.k + '" value="' + esc(vals[f.k] || "") + '"></label>').join("");
+  $("dlg-ok").onclick = async () => {
+    const o = {};
+    $("dlg-f").querySelectorAll("input").forEach(i => { o[i.getAttribute("data-k")] = i.value.trim(); });
+    $("dlg-ok").disabled = true;
+    const ok = await onSave(o);
+    $("dlg-ok").disabled = false;
+    if (ok) $("dlg").close();
+  };
+  $("dlg").showModal();
+}
+$("dlg-x").onclick = () => $("dlg").close();
+
+function editRow(rec) { // rec = null berarti tambah baru
+  const lama = rec ? rec.kode : "";
+  openDlg(rec ? "Edit " + VERSI[ver].label + " · " + lama : "Tambah kode baru · " + VERSI[ver].label,
+    COLS[tab].map(c => ({k: c[0], label: c[1]})), rec || {},
+    async o => {
+      const d = await write({action: "row_save", versi: ver, kode_lama: lama, data: o});
+      if (d.ok) { toast("Tersimpan"); search(); return true; }
+    },
+    rec ? "Mengubah kode ikut memindahkan nama lokal dan favorit yang terkait. Perubahan dicatat di sheet LOG."
+        : "Tulis kolom hierarki seperti di data resmi, mis. 56 Penyediaan Makanan dan Minuman.");
+}
+$("new-row").onclick = () => editRow(null);
+
+function buildTabs() {
+  $("tabs").innerHTML = Object.keys(VERSI).map(k => '<button class="tab" data-v="' + k + '">' + VERSI[k].label + "</button>").join("");
+}
+$("tabs").onclick = e => { const v = e.target.getAttribute("data-v"); if (v && v !== ver) setTab(v); };
+$("q").oninput = () => { clearTimeout(timer); timer = setTimeout(search, 300); };
+$("sv").onchange = search;
+$("rst").onclick = () => { F = {}; $("sv").value = ""; search(); };
+$("sug").onclick = e => { const s = e.target.getAttribute("data-sug"); if (s) { $("q").value = s; search(); } };
+
+$("out").onclick = async e => {
+  const t = e.target; let v;
+  if ((v = t.getAttribute("data-copy"))) { try { await navigator.clipboard.writeText(v); toast("Kode " + v + " disalin"); } catch (x) { toast("Tidak bisa menyalin"); } }
+  else if ((v = t.getAttribute("data-fav"))) { const d = await write({action: "fav", versi: ver, kode: v}); if (d.ok) { toast(d.favorit ? "Ditandai favorit" : "Favorit dihapus"); search(); } }
+  else if ((v = t.getAttribute("data-del"))) { if (confirm("Hapus nama lokal ini?")) { const d = await write({action: "delete", id: v}); if (d.ok) { toast("Dihapus"); search(); } } }
+  else if ((v = t.getAttribute("data-ed"))) {
+    let l = null;
+    LAST.forEach(r => (r.lokal || []).forEach(x => { if (x.id === v) l = x; }));
+    if (l) openDlg("Edit nama lokal", LFIELDS, l, async o => {
+      const d = await write({action: "lokal_update", id: v, data: o});
+      if (d.ok) { toast("Nama lokal diperbarui"); refreshMeta(); search(); return true; }
+    }, "Mengubah kode memindahkan nama lokal ini ke kode lain. Perubahan dicatat di sheet LOG.");
+  }
+  else if ((v = t.getAttribute("data-edrow"))) { const rec = LAST.find(r => r.kode === v); if (rec) editRow(rec); }
+  else if ((v = t.getAttribute("data-add"))) { $("lf").open = true; $("l-kode").value = v; $("l-nama").focus(); $("lf").scrollIntoView(); }
+};
+
+$("l-add").onclick = async () => {
+  addTag($("tg-in").value);
+  const kode = $("l-kode").value.trim(), nama = $("l-nama").value.trim();
+  if (!kode || !nama) { $("l-msg").textContent = "Kode dan nama lokal wajib diisi."; return; }
+  $("l-add").disabled = true;
+  const d = await write({action: "add", versi: ver, kode, nama_lokal: nama, wilayah: $("l-wil").value.trim(), catatan_lokal: $("l-cat").value.trim(), survei: SV.join(", ")});
+  $("l-add").disabled = false;
+  if (d.ok) { $("l-msg").textContent = ""; toast("Nama lokal tersimpan"); refreshMeta(); $("l-nama").value = ""; $("l-cat").value = ""; search(); }
+};
+
+$("tok-save").onclick = () => {
+  try { localStorage.setItem("edit_token", $("tok").value.trim()); toast("Kode edit tersimpan"); refreshMeta(); search(); }
+  catch (e) { $("tok-msg").textContent = "Browser menolak penyimpanan."; }
+};
+
+(async function init() {
+  document.body.classList.add(ADMIN ? "admin" : "pub");
+  if (ADMIN) { $("mode").textContent = "Admin"; document.title = "Admin · " + document.title; }
+  else if (/GANTI/.test(FORM_URL)) $("usul").parentNode.style.display = "none";
+  else $("usul").href = FORM_URL;
+  $("tok").value = getTok();
+  try { META = await call("meta"); if (META.error) META = {}; } catch (e) {}
+  try { const sv = localStorage.getItem("versi"); if (VERSI[sv]) ver = sv; } catch (e) {}
+  buildTabs(); renderPick(); setTab(ver);
+})();
+</script>
+</body>
+</html>

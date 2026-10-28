@@ -51,6 +51,25 @@ input:focus,select:focus{outline:2px solid var(--or);border-color:var(--or)}
 .meta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--mut);margin:6px 2px 8px;min-height:26px}
 .mr{display:flex;gap:8px;align-items:center;flex:0 0 auto}
 .mr a{color:var(--or-tx);font-weight:600;text-decoration:none}
+.vsel{flex:1.3;min-width:0;min-height:38px;padding:4px 8px;font-size:14px;font-weight:600;border-radius:10px}
+.kchips{display:flex;gap:6px;overflow-x:auto;padding:0 0 8px;scrollbar-width:none}
+.kchips::-webkit-scrollbar{display:none}
+.kchips:empty{display:none}
+.kcb{flex:0 0 auto;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:999px;padding:3px 12px;font-size:13px;cursor:pointer}
+.kcb.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.nd{margin-bottom:6px;scroll-margin-top:130px}
+.nr{display:flex;gap:6px;align-items:center}
+.nh{flex:1;display:flex;gap:8px;align-items:center;min-width:0;text-align:left;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:9px 12px;color:var(--tx);font-size:14px;font-weight:600;cursor:pointer}
+.nh:hover{border-color:var(--pri)}
+.nh .ar{flex:0 0 12px;color:var(--pri-tx)}
+.nh .lb{flex:1;min-width:0;overflow-wrap:anywhere}
+.nh .cnt{flex:0 0 auto;font-size:12px;color:var(--mut);background:var(--pri-bg);border-radius:999px;padding:0 8px}
+.d0>.nr>.nh{border-left:4px solid var(--or)}
+.nc{margin:6px 0 4px 10px;padding-left:10px;border-left:2px solid var(--bd)}
+.path{margin-top:2px;font-size:12px;color:var(--mut)}
+.pt{background:none;border:0;color:var(--pri-tx);cursor:pointer;padding:0 3px;font-size:12px}
+.pt:hover{text-decoration:underline}
+.sp{opacity:.5}
 .item{background:var(--card);border:1px solid var(--bd);border-left:4px solid var(--bl);border-radius:14px;padding:10px 12px;margin-bottom:8px;box-shadow:var(--sh);animation:in .2s ease both}
 .item.fav{border-left-color:var(--or)}
 @keyframes in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -139,7 +158,7 @@ dialog h3{margin:0 0 4px;font-size:17px}
 
 <main>
   <div class="bar">
-    <div class="tabs" id="tabs"></div>
+    <div class="tabs" id="tabs"><button class="tab" data-j="kbli" type="button">KBLI</button><button class="tab" data-j="kbji" type="button">KBJI</button><select id="vsel" class="vsel" aria-label="Versi"></select></div>
     <div class="srch">
       <input type="search" id="q" placeholder="Cari kode, uraian, atau nama lokal…" autocomplete="off">
       <button class="fbtn" id="fbtn" type="button">Filter <span id="fcount"></span></button>
@@ -147,7 +166,8 @@ dialog h3{margin:0 0 4px;font-size:17px}
   </div>
   <div class="filters" id="flt" hidden><select id="sv" class="adm" aria-label="Survei"></select><button class="reset" id="rst" type="button">Reset filter</button></div>
   <div class="sug" id="sug"></div>
-  <div class="meta"><span id="meta"></span><span class="mr"><a id="usul" class="pubonly" target="_blank" rel="noopener">Tidak ketemu? Usulkan</a><button class="add adm" id="new-row" type="button">+ Kode baru (<span id="nr-ver"></span>)</button></span></div>
+  <div class="meta"><span id="meta"></span><span class="mr"><button class="add" id="collapse" type="button" hidden>Tutup semua</button><a id="usul" class="pubonly" target="_blank" rel="noopener">Tidak ketemu? Usulkan</a><button class="add adm" id="new-row" type="button">+ Kode baru (<span id="nr-ver"></span>)</button></span></div>
+  <div class="kchips" id="kc"></div>
   <div id="out"></div>
   <button class="more" id="more" type="button" hidden></button>
 
@@ -203,12 +223,17 @@ const COLS = {
 };
 const LFIELDS = [{k: "kode", label: "Kode KBLI"}, {k: "nama_lokal", label: "Nama lokal"}, {k: "wilayah", label: "Wilayah"}, {k: "catatan_lokal", label: "Catatan lokal"}, {k: "survei", label: "Survei (pisahkan dengan koma)"}];
 const PAGE = 15;
+const TL = {kbli: ["kategori", "golongan_pokok", "golongan", "subgolongan"], kbji: ["golongan_pokok", "golongan", "subgolongan"]};
 
-let ver = "kbli2025", tab = "kbli", F = {}, SV = [], SVLIST = [], DB = {}, CUR = null, SHOWN = PAGE, terms = [], seq = 0, timer, fkey = "";
+let ver = "kbli2025", tab = "kbli", F = {}, SV = [], SVLIST = [], DB = {}, CUR = null, SHOWN = PAGE, terms = [], seq = 0, timer, fkey = "", OPEN = {}, KSEL = "", JUMP = "";
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
 const compact = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, "");
 const svList = s => String(s || "").split(",").map(x => x.trim()).filter(Boolean);
+const short = s => String(s).split(" ")[0];
+const byKey = (a, b) => a.key.localeCompare(b.key, "id", {numeric: true});
+const byKode = (a, b) => a.kode.localeCompare(b.kode, "id", {numeric: true});
+const opens = () => (OPEN[ver] = OPEN[ver] || new Set());
 const getSess = () => { try { return sessionStorage.getItem("sess") || ""; } catch (e) { return ""; } };
 const setSess = v => { try { v ? sessionStorage.setItem("sess", v) : sessionStorage.removeItem("sess"); } catch (e) {} };
 
@@ -239,6 +264,20 @@ async function write(body) {
 }
 
 // ---------- data & pencarian lokal ----------
+function buildTree(rows, levels) {
+  const root = {kids: new Map(), rows: [], count: 0};
+  rows.forEach(r => {
+    let node = root;
+    levels.forEach(k => {
+      const key = r[k] || "(kosong)";
+      let c = node.kids.get(key);
+      if (!c) { c = {key, kids: new Map(), rows: [], count: 0}; node.kids.set(key, c); }
+      c.count++; node = c;
+    });
+    node.rows.push(r);
+  });
+  return root;
+}
 function prep(d) {
   const lokal = {}, fav = {};
   (d.lokal || []).forEach(l => { (lokal[l.kode] = lokal[l.kode] || []).push(l); });
@@ -248,7 +287,7 @@ function prep(d) {
     r._h = (Object.values(r).join(" ") + " " + lt).toLowerCase();
     r._c = compact(r._h);
   });
-  return {rows: d.rows, lokal, fav, survei: d.survei || []};
+  return {rows: d.rows, lokal, fav, survei: d.survei || [], kat: d.kategori || {}, tree: buildTree(d.rows, TL[d.tipe || VERSI[d.versi].jenis])};
 }
 async function loadData() {
   if (DB[ver]) return DB[ver];
@@ -315,6 +354,8 @@ async function search() {
   if (my !== seq) return;
   $("out").classList.remove("load");
   const n = syncFilters(db), lv = LV[tab], sv = ADMIN ? $("sv").value : "";
+  KSEL = "";
+  if (!terms.length && n === 0) { CUR = {browse: true, db, n}; render(); return; }
   const q = terms.join(" "), cq = compact(q);
   const rows = db.rows.filter(r => {
     for (const k of lv) if (F[k] && r[k] !== F[k]) return false;
@@ -322,13 +363,13 @@ async function search() {
     return terms.every(t => r._h.includes(t)) || (cq.length > 2 && r._c.includes(cq));
   });
   rows.sort((a, b) => (db.fav[b.kode] ? 1 : 0) - (db.fav[a.kode] ? 1 : 0));
-  CUR = {rows, db, n}; SHOWN = PAGE;
+  CUR = {all: rows, rows, db, n}; SHOWN = PAGE;
   render();
 }
 
 // ---------- tampilan ----------
 function svBadges(l) { return l.survei ? svList(l.survei).map(s => '<span class="sv">' + esc(s) + "</span>").join("") : ""; }
-function card(r, db, kb) {
+function card(r, db, kb, inTree) {
   const title = kb ? (r.kelompok || r.subgolongan) : r.uraian;
   const rows = SHOW[tab].filter(c => r[c]).map(c => "<dt>" + LBL[c] + "</dt><dd>" + esc(r[c]) + "</dd>").join("");
   const locs = kb ? (db.lokal[r.kode] || []) : [], fav = !!db.fav[r.kode];
@@ -338,9 +379,13 @@ function card(r, db, kb) {
     '<span class="chip">' + hl(l.nama_lokal) + (l.wilayah ? " · " + esc(l.wilayah) : "") + (l.catatan_lokal ? " — " + esc(l.catatan_lokal) : "") +
     (ADMIN ? svBadges(l) + '<button data-ed="' + esc(l.id) + '" title="Edit" aria-label="Edit">✎</button><button data-del="' + esc(l.id) + '" title="Hapus" aria-label="Hapus">×</button>' : "") + "</span>").join("") +
     (ADMIN ? '<button class="add" data-add="' + esc(r.kode) + '">+ nama lokal</button>' : "") + "</div>" : "";
+  const pathLine = inTree ? "" : '<div class="path">' + TL[tab].filter(k => r[k]).map(k => {
+    const i = TL[tab].indexOf(k);
+    return '<button class="pt" data-jump="' + esc(TL[tab].slice(0, i + 1).map(x => r[x] || "(kosong)").join("|")) + '" title="' + esc(r[k]) + '" type="button">' + esc(short(r[k])) + "</button>";
+  }).join('<span class="sp">›</span>') + "</div>";
   return '<article class="item' + (fav ? " fav" : "") + '"><div class="top">' +
     '<button class="code" data-copy="' + esc(r.kode) + '" title="Klik untuk menyalin kode">' + esc(r.kode) + "</button>" +
-    '<div class="ttl">' + (kb && r.kategori ? '<span class="kat">Kat. ' + esc(r.kategori) + "</span>" : "") + hl(title) + "</div>" + edr + star + "</div>" +
+    '<div class="ttl">' + (kb && r.kategori ? '<span class="kat">Kat. ' + esc(r.kategori) + "</span>" : "") + hl(title) + "</div>" + edr + star + "</div>" + pathLine +
     (r.nama_lokal ? '<div class="loc">' + hl(r.nama_lokal) + "</div>" : "") + chips +
     (rows ? '<details class="rc"><summary>Rincian hierarki</summary><dl>' + rows + "</dl></details>" : "") + "</article>";
 }
@@ -352,12 +397,78 @@ function emptyMsg() {
     : "Tidak ada hasil. Coba kata lain atau kurangi kata kunci.") + usul + "</div>";
 }
 function render() {
+  if (CUR.browse) return renderTree();
   const {rows, db, n} = CUR, kb = tab === "kbli", shown = rows.slice(0, SHOWN), left = rows.length - shown.length;
+  renderChips();
   $("meta").textContent = rows.length + " hasil" + (left > 0 ? " · menampilkan " + shown.length : "");
   $("out").innerHTML = shown.map(r => card(r, db, kb)).join("") || emptyMsg();
-  $("more").hidden = left <= 0;
+  $("more").hidden = left <= 0; $("collapse").hidden = true;
   $("more").textContent = "Tampilkan " + Math.min(PAGE, left) + " lagi (" + left + " tersisa)";
   $("sug").style.display = ($("q").value.trim() || n) ? "none" : "";
+}
+
+// ---------- jelajah (pohon) & kelompok hasil ----------
+function treeHtml(parent, pp, depth, db, kb) {
+  const last = depth === TL[tab].length - 1, s = opens();
+  return [...parent.kids.values()].sort(byKey).map(n => {
+    const p = pp ? pp + "|" + n.key : n.key, open = s.has(p);
+    const label = depth === 0 && kb
+      ? '<span class="kat">' + esc(n.key) + "</span>" + esc(db.kat[n.key] || "")
+      : esc(n.key);
+    const body = !open ? "" : last
+      ? n.rows.slice().sort(byKode).map(r => card(r, db, kb, true)).join("")
+      : treeHtml(n, p, depth + 1, db, kb);
+    return '<div class="nd d' + Math.min(depth, 3) + '" data-path="' + esc(p) + '"><div class="nr">' +
+      '<button class="nh" data-tg="' + esc(p) + '" type="button"><span class="ar">' + (open ? "▾" : "▸") + '</span><span class="lb">' + label + '</span><span class="cnt">' + n.count + "</span></button>" +
+      (ADMIN && kb && depth === 0 ? '<button class="edrow" data-katedit="' + esc(n.key) + '" type="button" title="Edit nama kategori">✎</button>' : "") +
+      "</div>" + (open ? '<div class="nc">' + body + "</div>" : "") + "</div>";
+  }).join("");
+}
+function renderTree() {
+  const {db} = CUR, kb = tab === "kbli", top = db.tree.kids.size;
+  $("kc").innerHTML = "";
+  $("meta").textContent = top + (kb ? " kategori" : " golongan pokok") + " · " + db.rows.length.toLocaleString("id-ID") + " kode";
+  $("out").innerHTML = top ? treeHtml(db.tree, "", 0, db, kb) : emptyMsg();
+  $("more").hidden = true;
+  $("collapse").hidden = opens().size === 0;
+  $("sug").style.display = "";
+  if (JUMP) {
+    document.querySelectorAll(".nd").forEach(e => { if (e.getAttribute("data-path") === JUMP) e.scrollIntoView({block: "start"}); });
+    JUMP = "";
+  }
+}
+function jumpTo(keys) { // loncat ke posisi di mode jelajah
+  $("q").value = ""; $("sv").value = ""; F = {}; fkey = "";
+  const s = opens(); let p = "";
+  keys.forEach(k => { p = p ? p + "|" + k : k; s.add(p); });
+  JUMP = p; search();
+}
+function renderChips() {
+  const k0 = LV[tab][0], cnt = new Map();
+  CUR.all.forEach(r => { const k = r[k0] || ""; cnt.set(k, (cnt.get(k) || 0) + 1); });
+  if (cnt.size < 2) { $("kc").innerHTML = ""; return; }
+  const keys = [...cnt.keys()].sort((a, b) => a.localeCompare(b, "id", {numeric: true}));
+  $("kc").innerHTML = '<button class="kcb' + (KSEL ? "" : " on") + '" data-ks="" type="button">Semua (' + CUR.all.length + ")</button>" +
+    keys.map(k => {
+      const nm = tab === "kbli" && CUR.db.kat[k] ? k + " · " + CUR.db.kat[k] : k;
+      return '<button class="kcb' + (KSEL === k ? " on" : "") + '" data-ks="' + esc(k) + '" title="' + esc(nm) + '" type="button">' + esc(short(k) || "?") + " (" + cnt.get(k) + ")</button>";
+    }).join("");
+}
+function editKat(key) {
+  openDlg("Nama kategori " + key + " · " + VERSI[ver].label, [{k: "nama", label: "Nama kategori"}], {nama: CUR.db.kat[key] || ""}, async o => {
+    const d = await write({action: "kat_save", versi: ver, kategori: key, nama: o.nama});
+    if (d.ok) { toast("Nama kategori tersimpan"); search(); return true; }
+  }, "Dicatat di sheet KATEGORI dan LOG.");
+}
+function lastOf(j) {
+  let s = null; try { s = localStorage.getItem("versi_" + j); } catch (e) {}
+  return VERSI[s] && VERSI[s].jenis === j ? s : Object.keys(VERSI).find(k => VERSI[k].jenis === j);
+}
+function paintTabs() {
+  document.querySelectorAll("#tabs .tab").forEach(b => b.classList.toggle("on", b.getAttribute("data-j") === tab));
+  const ks = Object.keys(VERSI).filter(k => VERSI[k].jenis === tab);
+  $("vsel").innerHTML = ks.map(k => '<option value="' + k + '">' + esc(VERSI[k].label) + "</option>").join("");
+  $("vsel").value = ver; $("vsel").disabled = ks.length < 2;
 }
 
 // ---------- dialog (admin) ----------
@@ -407,11 +518,10 @@ function renderPick() {
 
 // ---------- tab versi & login ----------
 function fillSug() { $("sug").innerHTML = "Coba: " + SUG[tab].map(s => '<button data-sug="' + esc(s) + '" type="button">' + esc(s) + "</button>").join(""); }
-function buildTabs() { $("tabs").innerHTML = Object.keys(VERSI).map(k => '<button class="tab" data-v="' + k + '" type="button">' + VERSI[k].label + "</button>").join(""); }
 function setTab(v) {
   ver = v; tab = VERSI[v].jenis;
-  try { localStorage.setItem("versi", v); } catch (e) {}
-  document.querySelectorAll("#tabs .tab").forEach(b => b.classList.toggle("on", b.getAttribute("data-v") === v));
+  try { localStorage.setItem("versi_" + tab, v); localStorage.setItem("jenis", tab); } catch (e) {}
+  paintTabs();
   $("lf").style.display = tab === "kbli" ? "" : "none";
   $("lf-ver").textContent = VERSI[v].label; $("nr-ver").textContent = VERSI[v].label;
   $("q").value = ""; $("sv").value = ""; F = {}; fkey = ""; fillSug(); search();
@@ -423,7 +533,7 @@ function showLogin(msg) {
 }
 
 // ---------- event ----------
-$("tabs").onclick = e => { const v = e.target.getAttribute("data-v"); if (v && v !== ver) setTab(v); };
+$("tabs").onclick = e => { const j = e.target.getAttribute("data-j"); if (j && j !== tab) setTab(lastOf(j)); };
 $("q").oninput = () => { clearTimeout(timer); timer = setTimeout(search, 120); };
 $("fbtn").onclick = () => { $("flt").hidden = !$("flt").hidden; };
 $("sv").onchange = search;
@@ -431,14 +541,26 @@ $("rst").onclick = () => { F = {}; $("sv").value = ""; fkey = ""; search(); };
 $("sug").onclick = e => { const s = e.target.getAttribute("data-sug"); if (s) { $("q").value = s; search(); } };
 $("more").onclick = () => { SHOWN += PAGE; render(); };
 $("dlg-x").onclick = () => $("dlg").close();
+$("vsel").onchange = () => setTab($("vsel").value);
+$("collapse").onclick = () => { opens().clear(); render(); };
+$("kc").onclick = e => {
+  const k = e.target.getAttribute("data-ks");
+  if (k === null) return;
+  KSEL = k; const k0 = LV[tab][0];
+  CUR.rows = KSEL ? CUR.all.filter(r => r[k0] === KSEL) : CUR.all; SHOWN = PAGE; render();
+};
 $("new-row").onclick = () => editRow(null);
 
 $("out").onclick = async e => {
   const t = e.target; let v;
-  if ((v = t.getAttribute("data-copy"))) { try { await navigator.clipboard.writeText(v); toast("Kode " + v + " disalin"); } catch (x) { toast("Tidak bisa menyalin"); } }
+  const tg = t.closest ? t.closest("[data-tg]") : null;
+  if (tg) { const p = tg.getAttribute("data-tg"), s = opens(); if (s.has(p)) s.delete(p); else s.add(p); render(); }
+  else if ((v = t.getAttribute("data-jump"))) jumpTo(v.split("|"));
+  else if ((v = t.getAttribute("data-katedit"))) editKat(v);
+  else if ((v = t.getAttribute("data-copy"))) { try { await navigator.clipboard.writeText(v); toast("Kode " + v + " disalin"); } catch (x) { toast("Tidak bisa menyalin"); } }
   else if ((v = t.getAttribute("data-fav"))) {
     const d = await write({action: "fav", versi: ver, kode: v});
-    if (d.ok) { CUR.db.fav[v] = d.favorit; CUR.rows.sort((a, b) => (CUR.db.fav[b.kode] ? 1 : 0) - (CUR.db.fav[a.kode] ? 1 : 0)); toast(d.favorit ? "Ditandai favorit" : "Favorit dihapus"); render(); }
+    if (d.ok) { CUR.db.fav[v] = d.favorit; if (CUR.rows) CUR.rows.sort((a, b) => (CUR.db.fav[b.kode] ? 1 : 0) - (CUR.db.fav[a.kode] ? 1 : 0)); toast(d.favorit ? "Ditandai favorit" : "Favorit dihapus"); render(); }
   }
   else if ((v = t.getAttribute("data-del"))) { if (confirm("Hapus nama lokal ini?")) { const d = await write({action: "delete", id: v}); if (d.ok) { toast("Dihapus"); search(); } } }
   else if ((v = t.getAttribute("data-ed"))) {
@@ -448,7 +570,7 @@ $("out").onclick = async e => {
       if (d.ok) { toast("Nama lokal diperbarui"); search(); return true; }
     }, "Mengubah kode memindahkan nama lokal ini ke kode lain. Perubahan dicatat di sheet LOG.");
   }
-  else if ((v = t.getAttribute("data-edrow"))) { const rec = CUR.rows.find(r => r.kode === v); if (rec) editRow(rec); }
+  else if ((v = t.getAttribute("data-edrow"))) { const rec = CUR.db.rows.find(r => r.kode === v); if (rec) editRow(rec); }
   else if ((v = t.getAttribute("data-add"))) { $("lf").open = true; $("l-kode").value = v; $("l-nama").focus(); $("lf").scrollIntoView(); }
 };
 
@@ -492,9 +614,9 @@ $("logout").onclick = async () => { try { await postJSON({action: "logout"}); } 
   if (ADMIN) { $("mode").textContent = "Admin"; document.title = "Admin · " + document.title; $("logout").hidden = false; }
   else if (/GANTI/.test(FORM_URL)) $("usul").style.display = "none";
   else $("usul").href = FORM_URL;
-  try { const s = localStorage.getItem("versi"); if (VERSI[s]) ver = s; } catch (e) {}
-  buildTabs();
-  if (ADMIN && !getSess()) { tab = VERSI[ver].jenis; document.querySelectorAll("#tabs .tab").forEach(b => b.classList.toggle("on", b.getAttribute("data-v") === ver)); showLogin(); }
+  let j = "kbli"; try { j = localStorage.getItem("jenis") || "kbli"; } catch (e) {}
+  ver = lastOf(j) || lastOf("kbli");
+  if (ADMIN && !getSess()) { tab = VERSI[ver].jenis; paintTabs(); showLogin(); }
   else setTab(ver);
 })();
 </script>

@@ -70,6 +70,9 @@ input:focus,select:focus{outline:2px solid var(--or);border-color:var(--or)}
 .pt{background:none;border:0;color:var(--pri-tx);cursor:pointer;padding:0 3px;font-size:12px}
 .pt:hover{text-decoration:underline}
 .sp{opacity:.5}
+.mi{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--bd)}
+.mq{font-weight:600;flex:1 1 140px;overflow-wrap:anywhere}
+.mv,.mn{font-size:12px;color:var(--mut)}
 .item{background:var(--card);border:1px solid var(--bd);border-left:4px solid var(--bl);border-radius:14px;padding:10px 12px;margin-bottom:8px;box-shadow:var(--sh);animation:in .2s ease both}
 .item.fav{border-left-color:var(--or)}
 @keyframes in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -179,7 +182,13 @@ dialog h3{margin:0 0 4px;font-size:17px}
     <div class="note" id="l-msg"></div>
   </details>
 
-  <footer>Sumber: BPS (KBLI 2025, KBLI 2020, KBJI 2015). Nama lokal adalah bantuan pencarian; penetapan kode akhir mengikuti dokumen resmi BPS.</footer>
+  <details id="miss" class="panel adm"><summary>Pencarian tak ketemu <span id="miss-n"></span></summary>
+    <div class="note">Kata yang dicari pengunjung tetapi tidak ada hasilnya (tanpa identitas). Jadikan nama lokal agar berikutnya ketemu.</div>
+    <div id="ml"></div>
+    <button class="add" id="miss-r" type="button" style="margin-top:8px">Muat ulang</button>
+  </details>
+
+  <footer>Sumber: BPS (KBLI 2025, KBLI 2020, KBJI 2015). Nama lokal adalah bantuan pencarian; penetapan kode akhir mengikuti dokumen resmi BPS. Kata yang dicari tanpa hasil dicatat tanpa identitas untuk melengkapi data.</footer>
 </main>
 
 <dialog id="dlg" class="adm"><h3 id="dlg-t"></h3><div class="note" id="dlg-n"></div><div id="dlg-f"></div>
@@ -203,7 +212,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzwQtETwQ8KSIes1C72Heek
 // ==================================================================================
 const ADMIN = false; // diganti true pada admin.html
 // ====== GANTI dengan link Google Form untuk usulan dari umum ======
-const FORM_URL = "GANTI_DENGAN_LINK_GOOGLE_FORM";
+const FORM_URL = "https://script.google.com/macros/s/AKfycbzwQtETwQ8KSIes1C72HeekauAjkAyWt2suSDgSSInLteis9AYFyfBxcsk-mNN--_jS/exec";
 // ==================================================================
 
 // Daftar versi: samakan dengan VERSI di Code.gs
@@ -365,6 +374,7 @@ async function search() {
   rows.sort((a, b) => (db.fav[b.kode] ? 1 : 0) - (db.fav[a.kode] ? 1 : 0));
   CUR = {all: rows, rows, db, n}; SHOWN = PAGE;
   render();
+  if (!ADMIN && !rows.length) noteMiss();
 }
 
 // ---------- tampilan ----------
@@ -470,6 +480,46 @@ function paintTabs() {
   $("vsel").innerHTML = ks.map(k => '<option value="' + k + '">' + esc(VERSI[k].label) + "</option>").join("");
   $("vsel").value = ver; $("vsel").disabled = ks.length < 2;
 }
+
+// ---------- catatan pencarian tanpa hasil ----------
+const MISS = new Set(); let missT, MISSROWS = [];
+function normQ() { return $("q").value.trim().toLowerCase().replace(/\s+/g, " "); }
+function noteMiss() { // publik: catat kata yang tidak ada hasilnya (sekali per kata, setelah berhenti mengetik)
+  clearTimeout(missT);
+  const q = normQ();
+  if (q.length < 3 || Object.keys(F).length) return;
+  missT = setTimeout(() => {
+    if (normQ() !== q || (CUR && CUR.all && CUR.all.length)) return;
+    const key = ver + "|" + q;
+    if (MISS.has(key)) return;
+    MISS.add(key);
+    getJSON({action: "miss", q, versi: ver}).catch(() => {});
+  }, 1500);
+}
+async function loadMiss() {
+  const d = await postJSON({action: "miss_list"});
+  if (d.error) { $("ml").textContent = d.error; return; }
+  MISSROWS = d.rows || [];
+  $("miss-n").textContent = MISSROWS.length ? "(" + MISSROWS.length + ")" : "";
+  $("ml").innerHTML = MISSROWS.map((r, i) => {
+    const v = VERSI[r.versi] || {label: r.versi, jenis: ""};
+    return '<div class="mi"><span class="mq">' + esc(r.q) + '</span><span class="mv">' + esc(v.label) + '</span><span class="mn">' + r.jumlah + "×</span>" +
+      (v.jenis === "kbli" ? '<button class="add" data-mfill="' + i + '" type="button">Jadikan nama lokal</button>' : "") +
+      '<button class="add" data-mdel="' + i + '" type="button">Hapus</button></div>';
+  }).join("") || '<div class="note">Belum ada catatan.</div>';
+}
+$("ml").onclick = async e => {
+  const f = e.target.getAttribute("data-mfill"), x = e.target.getAttribute("data-mdel");
+  if (f !== null) {
+    const r = MISSROWS[+f]; if (r.versi !== ver) setTab(r.versi);
+    $("lf").open = true; $("l-nama").value = r.q; $("l-kode").focus(); $("lf").scrollIntoView();
+  } else if (x !== null) {
+    const r = MISSROWS[+x], d = await postJSON({action: "miss_del", q: r.q, versi: r.versi});
+    if (d.ok) loadMiss();
+  }
+};
+$("miss").ontoggle = () => { if ($("miss").open) loadMiss(); };
+$("miss-r").onclick = loadMiss;
 
 // ---------- dialog (admin) ----------
 function openDlg(title, fields, vals, onSave, note) {
@@ -591,6 +641,7 @@ $("l-add").onclick = async () => {
   $("l-add").disabled = false;
   if (d.ok) {
     $("l-msg").textContent = known ? "" : "Tersimpan, tetapi kode " + kode + " belum ada di " + VERSI[ver].label + ", jadi belum tampil di hasil.";
+    postJSON({action: "miss_del", q: nama.toLowerCase().replace(/\s+/g, " "), versi: ver}).then(() => { if ($("miss").open) loadMiss(); });
     toast("Nama lokal tersimpan"); $("l-nama").value = ""; $("l-cat").value = ""; search();
   }
 };

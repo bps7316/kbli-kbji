@@ -74,6 +74,15 @@ input:focus,select:focus{outline:2px solid var(--or);border-color:var(--or)}
 .mi{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--bd)}
 .mq{font-weight:600;flex:1 1 140px;overflow-wrap:anywhere}
 .mv,.mn{font-size:12px;color:var(--mut)}
+a.add{text-decoration:none;display:inline-block}
+.cg{border:1px solid var(--bd);border-radius:10px;padding:8px 10px;margin-top:8px}
+.cg summary{cursor:pointer;font-weight:400;color:var(--tx);font-size:14px}
+.cg.err{border-left:4px solid #c0392b}.cg.warn{border-left:4px solid var(--or)}.cg.info{border-left:4px solid var(--bl)}
+.cg .cnt{font-size:12px;color:var(--mut);background:var(--pri-bg);border-radius:999px;padding:0 8px;margin-left:4px}
+.ci{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:4px 0;font-size:13px;border-top:1px solid var(--bd)}
+.ci>span:first-child{flex:1;overflow-wrap:anywhere}
+.cb{flex:0 0 auto;display:flex;gap:6px}
+.ok{padding:12px;color:var(--gr-tx);font-weight:600}
 .item{background:var(--card);border:1px solid var(--bd);border-left:4px solid var(--bl);border-radius:14px;padding:10px 12px;margin-bottom:8px;box-shadow:var(--sh);animation:in .2s ease both}
 .item.fav{border-left-color:var(--or)}
 @keyframes in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -189,6 +198,12 @@ dialog h3{margin:0 0 4px;font-size:17px}
     <button class="add" id="miss-r" type="button" style="margin-top:8px">Muat ulang</button>
   </details>
 
+  <details id="chk" class="panel adm"><summary>Periksa data <span id="chk-n"></span></summary>
+    <div class="note">Memeriksa sheet versi yang sedang dipilih: kode ganda, kolom bergeser, jenjang kosong, dan penulisan nama yang tidak konsisten.</div>
+    <button class="add" id="chk-go" type="button" style="margin-top:8px">Periksa sekarang</button>
+    <div id="chk-out"></div>
+  </details>
+
   <footer>Sumber: BPS (KBLI 2025, KBLI 2020, KBJI 2015). Nama lokal adalah bantuan pencarian; penetapan kode akhir mengikuti dokumen resmi BPS. Kata yang dicari tanpa hasil dicatat tanpa identitas untuk melengkapi data.</footer>
 </main>
 
@@ -294,10 +309,10 @@ function prep(d) {
   (d.fav || []).forEach(k => { fav[k] = true; });
   d.rows.forEach(r => {
     const lt = (lokal[r.kode] || []).map(l => [l.nama_lokal, l.wilayah, l.catatan_lokal, l.survei || ""].join(" ")).join(" ");
-    r._h = (Object.values(r).join(" ") + " " + lt).toLowerCase();
+    r._h = (COLS[d.tipe || VERSI[d.versi].jenis].map(c => r[c[0]]).join(" ") + " " + lt).toLowerCase();
     r._c = compact(r._h);
   });
-  return {rows: d.rows, lokal, fav, survei: d.survei || [], kat: d.kategori || {}, tree: buildTree(d.rows, TL[d.tipe || VERSI[d.versi].jenis])};
+  return {rows: d.rows, lokal, fav, survei: d.survei || [], kat: d.kategori || {}, tanpaKode: d.tanpaKode || [], sheetUrl: d.sheetUrl || "", tree: buildTree(d.rows, TL[d.tipe || VERSI[d.versi].jenis])};
 }
 async function loadData() {
   if (DB[ver]) return DB[ver];
@@ -521,6 +536,83 @@ $("ml").onclick = async e => {
 };
 $("miss").ontoggle = () => { if ($("miss").open) loadMiss(); };
 $("miss-r").onclick = loadMiss;
+
+// ---------- pemeriksa data (admin) ----------
+const PL = {kbli: {golongan_pokok: 2, golongan: 3, subgolongan: 4, kelompok: 0}, kbji: {golongan_pokok: 1, golongan: 2, subgolongan: 3}};
+const REQ = {kbli: ["kategori", "golongan_pokok", "golongan", "subgolongan", "kelompok"], kbji: ["uraian", "golongan_pokok", "golongan", "subgolongan"]};
+function checkData(db) {
+  const rows = db.rows, jenis = tab, groups = [];
+  const add = (sev, title, hint, items, total) => { if (items.length) groups.push({sev, title, hint, items, total: total || items.length}); };
+  const num = r => /^\d+$/.test(r.kode);
+  add("err", "Baris berisi data tetapi tanpa kode (tidak tampil di pencarian)", "Isi kolom kode, atau hapus barisnya di Sheet.", (db.tanpaKode || []).map(b => ({baris: b, text: "kode kosong"})));
+  const cnt = {}; rows.forEach(r => { cnt[r.kode] = (cnt[r.kode] || 0) + 1; });
+  add("err", "Kode ganda", "Satu kode hanya boleh muncul sekali per versi. Tombol Edit tidak tersedia sampai ini diperbaiki di Sheet.", rows.filter(r => cnt[r.kode] > 1).map(r => ({baris: r._baris, text: "kode " + r.kode + " muncul " + cnt[r.kode] + "x"})));
+  add("err", "Kode bukan angka", "Kode KBLI dan KBJI hanya berisi angka.", rows.filter(r => !num(r)).map(r => ({baris: r._baris, text: 'kode "' + r.kode + '"'})));
+  const lc = {}; rows.filter(num).forEach(r => { lc[r.kode.length] = (lc[r.kode.length] || 0) + 1; });
+  const ml = +Object.keys(lc).sort((a, b) => lc[b] - lc[a])[0];
+  add("warn", "Panjang kode berbeda dari mayoritas (" + ml + " digit)", "Mungkin baris judul level atas atau salah ketik.", rows.filter(r => num(r) && r.kode.length !== ml).map(r => ({baris: r._baris, text: "kode " + r.kode + " (" + r.kode.length + " digit)"})));
+  add("err", "Kolom wajib masih kosong", "Kolom kosong membuat kode tidak tampil benar di mode jelajah dan filter.", rows.map(r => { const k = REQ[jenis].filter(c => !r[c]); return k.length ? {baris: r._baris, text: "kode " + r.kode + ": kosong " + k.join(", ")} : null; }).filter(Boolean));
+  if (jenis === "kbli") add("err", "Kategori bukan satu huruf (A-Z)", "Kolom kategori seharusnya huruf, mis. I. Angka atau teks panjang menandakan kolom bergeser.", rows.filter(r => r.kategori && !/^[A-Z]$/.test(r.kategori)).map(r => ({baris: r._baris, text: 'kode ' + r.kode + ': kategori "' + r.kategori + '"'})));
+  // teks tiap jenjang harus diawali angka yang sama dengan awalan kodenya
+  const lv = PL[jenis], nr = rows.filter(num);
+  Object.keys(lv).forEach(k => {
+    const bad = [];
+    nr.forEach(r => { if (!r[k]) return; const want = lv[k] ? r.kode.slice(0, lv[k]) : r.kode; if (short(r[k]) !== want) bad.push({r, want}); });
+    if (!bad.length) return;
+    const item = x => ({baris: x.r._baris, text: 'kode ' + x.r.kode + ": " + LVL[k] + ' "' + short(x.r[k]) + '" (seharusnya ' + x.want + ")"});
+    if (bad.length > nr.length * 0.3) add("err", "Kolom " + LVL[k] + " tidak cocok dengan kode pada " + Math.round(100 * bad.length / nr.length) + "% baris",
+      "Kemungkinan besar kolom bergeser, atau data dari jenis/versi lain tertempel di sheet ini. Lima contoh teratas ditampilkan.", bad.slice(0, 5).map(item), bad.length);
+    else add("warn", LVL[k] + " tidak cocok dengan awalan kode", "Teks kolom ini harus diawali angka yang sama dengan awalan kodenya.", bad.map(item));
+  });
+  // penulisan nama jenjang yang sama harus identik (kalau tidak, dropdown dan pohon menampilkan dua pilihan)
+  ["golongan_pokok", "golongan", "subgolongan"].forEach(k => {
+    const by = {};
+    rows.forEach(r => { if (!r[k]) return; const m = by[short(r[k])] || (by[short(r[k])] = new Map()); m.set(r[k], (m.get(r[k]) || 0) + 1); });
+    add("warn", "Penulisan " + LVL[k] + " tidak konsisten", "Teks yang sama harus ditulis persis sama di semua baris (termasuk spasi dan huruf besar).",
+      Object.keys(by).filter(key => by[key].size > 1).map(key => {
+        const minor = [...by[key].entries()].sort((a, b) => a[1] - b[1])[0][0], row = rows.find(r => r[k] === minor);
+        return {baris: row._baris, text: key + " ditulis " + by[key].size + " cara: " + [...by[key].keys()].map(v => '"' + v + '"').join(" | ")};
+      }));
+  });
+  if (jenis === "kbli") {
+    const by = {};
+    rows.forEach(r => { if (!r.golongan_pokok || !r.kategori) return; const key = short(r.golongan_pokok); (by[key] = by[key] || new Set()).add(r.kategori); });
+    add("warn", "Satu golongan pokok berada di lebih dari satu kategori", "Setiap golongan pokok hanya boleh masuk satu kategori.",
+      Object.keys(by).filter(key => by[key].size > 1).map(key => ({baris: (rows.find(r => short(r.golongan_pokok) === key) || {})._baris, text: "golongan pokok " + key + " muncul di kategori " + [...by[key]].join(", ")})));
+    const miss = [...new Set(rows.map(r => r.kategori).filter(Boolean))].filter(k => !db.kat[k]).sort();
+    add("info", "Kategori belum punya nama (" + miss.join(", ") + ")", "Isi lewat tombol ✎ di mode jelajah atau lewat sheet KATEGORI.", miss.length ? [{text: miss.join(", ")}] : []);
+  }
+  const ord = {err: 0, warn: 1, info: 2};
+  return groups.sort((a, b) => ord[a.sev] - ord[b.sev]);
+}
+function renderCheck(groups, db) {
+  const sevL = {err: "Kesalahan", warn: "Peringatan", info: "Info"};
+  const fix = i => {
+    let h = "";
+    if (i.baris && db.sheetUrl) h += '<a class="add" target="_blank" rel="noopener" href="' + esc(db.sheetUrl + "&range=A" + i.baris) + '">Sheet</a>';
+    const rec = i.baris ? db.rows.find(r => r._baris === i.baris) : null;
+    if (rec && rec.kode && db.rows.filter(r => r.kode === rec.kode).length === 1) h += '<button class="add" data-fix="' + i.baris + '" type="button">Edit</button>';
+    return '<span class="cb">' + h + "</span>";
+  };
+  $("chk-n").textContent = groups.length ? "(" + groups.length + " jenis masalah)" : "";
+  $("chk-out").innerHTML = groups.length ? groups.map(g =>
+    '<details class="cg ' + g.sev + '"><summary><b>' + sevL[g.sev] + ":</b> " + esc(g.title) + ' <span class="cnt">' + g.total + "</span></summary>" +
+    '<div class="note">' + esc(g.hint) + "</div>" +
+    g.items.slice(0, 25).map(i => '<div class="ci"><span>' + (i.baris ? "Baris " + i.baris + ": " : "") + esc(i.text) + "</span>" + fix(i) + "</div>").join("") +
+    (g.total > Math.min(g.items.length, 25) ? '<div class="note">dan ' + (g.total - Math.min(g.items.length, 25)) + " lainnya…</div>" : "") + "</details>").join("")
+    : '<div class="ok">Tidak ada masalah ditemukan pada ' + db.rows.length + " baris " + esc(VERSI[ver].label) + ".</div>";
+}
+$("chk-go").onclick = async () => {
+  $("chk-out").textContent = "Memeriksa…";
+  try { delete DB[ver]; const db = await loadData(); renderCheck(checkData(db), db); }
+  catch (e) { $("chk-out").textContent = "Gagal memeriksa: " + (e.message || "coba lagi"); }
+};
+$("chk-out").onclick = e => {
+  const v = e.target.getAttribute("data-fix");
+  if (v === null || !DB[ver]) return;
+  const rec = DB[ver].rows.find(r => r._baris === +v);
+  if (rec) editRow(rec);
+};
 
 // ---------- dialog (admin) ----------
 function openDlg(title, fields, vals, onSave, note) {
